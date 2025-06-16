@@ -188,11 +188,7 @@
           <div class="panel-header">
             <h2>CSS Preview</h2>
             <div class="header-actions">
-              <button
-                @click="exportToJson"
-                class="export-btn"
-                title="Export as JSON"
-              >
+              <button @click="exportToJson" class="export-btn" title="Export">
                 <svg
                   width="16"
                   height="16"
@@ -205,28 +201,7 @@
                   <polyline points="7,10 12,15 17,10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                Export JSON
-              </button>
-              <button
-                @click="copyCssToClipboard"
-                class="copy-btn"
-                :disabled="!formattedCss"
-                title="Copy CSS to clipboard"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path
-                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                  ></path>
-                </svg>
-                Copy CSS
+                Export
               </button>
             </div>
           </div>
@@ -241,23 +216,102 @@
       </div>
     </div>
 
-    <!-- Export Modal -->
+    <!-- Enhanced Export Modal with Format Options -->
     <div v-if="showExportModal" class="modal-overlay" @click="closeExportModal">
       <div class="modal" @click.stop>
         <div class="modal-header">
-          <h3>Exported JSON</h3>
+          <h3>Export</h3>
           <button @click="closeExportModal" class="close-btn">×</button>
         </div>
         <div class="modal-body">
+          <!-- Export Format Options -->
+          <div class="export-options">
+            <h4>Export Format:</h4>
+            <div class="format-buttons">
+              <button
+                @click="setExportFormat('complete')"
+                class="format-btn"
+                :class="{ active: exportFormat === 'complete' }"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  ></path>
+                  <polyline points="14,2 14,8 20,8"></polyline>
+                </svg>
+                Complete JSON Object
+              </button>
+              <button
+                @click="setExportFormat('property')"
+                class="format-btn"
+                :class="{ active: exportFormat === 'property' }"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+                Property Only
+              </button>
+              <button
+                @click="setExportFormat('css')"
+                class="format-btn"
+                :class="{ active: exportFormat === 'css' }"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"
+                  ></path>
+                </svg>
+                CSS
+              </button>
+            </div>
+          </div>
+
+          <!-- Export Textarea -->
           <textarea
             v-model="exportedJson"
             readonly
             class="export-textarea"
             @click="selectAllText"
+            :placeholder="
+              'Your exported ' +
+              (exportFormat === 'complete'
+                ? 'JSON object'
+                : exportFormat === 'property'
+                ? 'property value'
+                : 'CSS') +
+              ' will appear here'
+            "
           ></textarea>
         </div>
         <div class="modal-footer">
-          <button @click="copyJsonToClipboard" class="primary-btn">
+          <button
+            @click="copyJsonToClipboard"
+            class="primary-btn"
+            :disabled="!exportedJson"
+          >
             <svg
               width="16"
               height="16"
@@ -267,9 +321,7 @@
               stroke-width="2"
             >
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path
-                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-              ></path>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"></path>
             </svg>
             Copy to Clipboard
           </button>
@@ -294,6 +346,7 @@ import {
 
 // Explicit type definitions for better TypeScript support
 type StepType = "input" | "edit";
+type ExportFormatType = "complete" | "property" | "css";
 
 interface NewRuleData {
   selector: string;
@@ -315,6 +368,7 @@ const activeRuleId: Ref<string | null> = ref<string | null>(null);
 // Export state with explicit types
 const showExportModal: Ref<boolean> = ref<boolean>(false);
 const exportedJson: Ref<string> = ref<string>("");
+const exportFormat: Ref<ExportFormatType> = ref<ExportFormatType>("complete");
 
 const newRule: Ref<NewRuleData> = ref<NewRuleData>({
   selector: "",
@@ -342,8 +396,6 @@ const highlightedCss: ComputedRef<string> = computed<string>(() => {
     );
 
     if (activeRule) {
-      console.log("Highlighting rule with selector:", activeRule.selector);
-
       // Split CSS into lines to find the active rule
       const lines = cssToHighlight.split("\n");
       let ruleStartIndex = -1;
@@ -355,7 +407,6 @@ const highlightedCss: ComputedRef<string> = computed<string>(() => {
 
         // Look for exact selector match (the format is "selector {")
         if (!foundRule && line.trim() === `${activeRule.selector} {`) {
-          console.log("Found rule start at line:", i, "Line content:", line);
           foundRule = true;
           ruleStartIndex = i;
         }
@@ -363,7 +414,6 @@ const highlightedCss: ComputedRef<string> = computed<string>(() => {
         // If we found the rule start, look for the closing brace
         if (foundRule && ruleEndIndex === -1) {
           if (line.trim() === "}") {
-            console.log("Found rule end at line:", i);
             ruleEndIndex = i;
             break;
           }
@@ -372,12 +422,9 @@ const highlightedCss: ComputedRef<string> = computed<string>(() => {
 
       // Mark lines for highlighting
       if (ruleStartIndex !== -1 && ruleEndIndex !== -1) {
-        console.log(`Highlighting lines ${ruleStartIndex} to ${ruleEndIndex}`);
         for (let i = ruleStartIndex; i <= ruleEndIndex; i++) {
           ruleHighlightMap.set(i, true);
         }
-      } else {
-        console.log("Could not find complete rule block");
       }
     }
   }
@@ -512,25 +559,16 @@ function addRule(): void {
   }
 }
 
-// Improved active rule management with toggle functionality
 function setActiveRule(ruleId: string): void {
   // Toggle functionality: if clicking the same rule, deselect it
   if (activeRuleId.value === ruleId) {
-    console.log("Deselecting active rule:", ruleId);
     activeRuleId.value = null;
     return;
-  }
-
-  console.log("Setting active rule:", ruleId);
-  const rule = cssRules.value.find((r) => r.id === ruleId);
-  if (rule) {
-    console.log("Active rule selector:", rule.selector);
   }
   activeRuleId.value = ruleId;
 }
 
 function clearActiveRule(): void {
-  console.log("Clearing active rule");
   activeRuleId.value = null;
 }
 
@@ -548,25 +586,45 @@ function handleBackgroundClick(event: Event): void {
 async function copyCssToClipboard(): Promise<void> {
   try {
     await navigator.clipboard.writeText(formattedCss.value);
-    // You could add a toast notification here
     console.log("CSS copied to clipboard!");
   } catch (err) {
     console.error("Failed to copy CSS: ", err);
   }
 }
 
+// Enhanced export function with format options
 function exportToJson(): void {
-  const css = formattedCss.value;
-  const escapedCss = escapeForJson(css);
-  const jsonData = {
-    customCss: escapedCss,
-  };
-  exportedJson.value = JSON.stringify(jsonData, null, 2);
   showExportModal.value = true;
+  updateExportedJson(); // Generate initial export based on current format
+}
+
+function setExportFormat(format: ExportFormatType): void {
+  exportFormat.value = format;
+  updateExportedJson();
+}
+
+function updateExportedJson(): void {
+  const css = formattedCss.value;
+
+  if (exportFormat.value === "complete") {
+    const escapedCss = escapeForJson(css);
+    const jsonData = {
+      customCss: escapedCss,
+    };
+    exportedJson.value = JSON.stringify(jsonData, null, 2);
+  } else if (exportFormat.value === "property") {
+    const escapedCss = escapeForJson(css);
+    // Property only format
+    exportedJson.value = `"customCss": ${JSON.stringify(escapedCss)}`;
+  } else if (exportFormat.value === "css") {
+    // Raw CSS format
+    exportedJson.value = css;
+  }
 }
 
 function closeExportModal(): void {
   showExportModal.value = false;
+  exportedJson.value = "";
 }
 
 async function copyJsonToClipboard(): Promise<void> {
@@ -999,7 +1057,6 @@ h1 {
   font-size: 13px;
   cursor: pointer;
   transition: background 0.2s;
-  margin-top: 8px;
 }
 
 .secondary-btn:hover {
@@ -1072,7 +1129,7 @@ h1 {
   font-weight: bold;
 }
 
-/* Improved active rule highlighting - continuous without gaps */
+/* Active rule highlighting */
 :deep(.active-rule-line) {
   background: rgba(255, 193, 7, 0.2);
   border-left: 4px solid #ffc107;
@@ -1097,16 +1154,6 @@ h1 {
   border-radius: 4px;
 }
 
-:deep(.active-rule-line::before) {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(90deg, #ffc107, rgba(255, 193, 7, 0.5));
-}
-
 @keyframes highlight-pulse {
   0% {
     background: rgba(255, 193, 7, 0.4);
@@ -1121,7 +1168,7 @@ h1 {
   }
 }
 
-/* Modal Styles */
+/* Enhanced Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1138,9 +1185,9 @@ h1 {
 .modal {
   background: white;
   border-radius: 8px;
-  max-width: 600px;
+  max-width: 700px;
   width: 90%;
-  max-height: 80vh;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
@@ -1181,11 +1228,62 @@ h1 {
   flex: 1;
   padding: 20px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Export Options Styles */
+.export-options {
+  margin-bottom: 20px;
+}
+
+.export-options h4 {
+  margin: 0 0 12px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.format-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.format-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 2px solid #ddd;
+  background: white;
+  color: #666;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  flex: 1;
+  justify-content: center;
+}
+
+.format-btn:hover {
+  border-color: #007bff;
+  color: #007bff;
+}
+
+.format-btn.active {
+  border-color: #007bff;
+  background: #007bff;
+  color: white;
+}
+
+.format-btn svg {
+  flex-shrink: 0;
 }
 
 .export-textarea {
-  width: 100%;
-  height: 300px;
+  flex: 1;
+  min-height: 200px;
   padding: 16px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -1201,6 +1299,15 @@ h1 {
   padding: 20px;
   border-top: 1px solid #eee;
   justify-content: flex-end;
+}
+
+.modal-footer .primary-btn,
+.modal-footer .secondary-btn {
+  height: 40px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Responsive Design */
@@ -1260,6 +1367,14 @@ h1 {
   .modal {
     width: 95%;
     margin: 20px;
+  }
+
+  .format-buttons {
+    flex-direction: column;
+  }
+
+  .format-btn {
+    justify-content: flex-start;
   }
 }
 </style>
