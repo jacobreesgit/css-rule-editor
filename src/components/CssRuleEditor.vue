@@ -4,16 +4,15 @@
     :class="{ active: isActive }"
     @click="handleRuleClick"
     tabindex="0"
-    @focus="$emit('focus')"
-    @blur="$emit('blur')"
   >
     <div class="rule-header">
       <input
         v-model="localRule.selector"
         @blur="updateRule"
-        @focus="$emit('focus')"
+        @focus="handleFocus"
         class="selector-input"
         placeholder="CSS Selector"
+        @click.stop
       />
       <button @click.stop="$emit('remove')" class="remove-btn">×</button>
     </div>
@@ -27,17 +26,19 @@
         <input
           v-model="decl.property"
           @blur="updateRule"
-          @focus="$emit('focus')"
+          @focus="handleFocus"
           class="property-input"
           placeholder="property"
+          @click.stop
         />
         <span class="colon">:</span>
         <input
           v-model="decl.value"
           @blur="updateRule"
-          @focus="$emit('focus')"
+          @focus="handleFocus"
           class="value-input"
           placeholder="value"
+          @click.stop
         />
         <button @click.stop="removeDeclaration(index)" class="remove-decl-btn">
           ×
@@ -63,8 +64,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   update: [rule: CssRule];
   remove: [];
-  focus: [];
-  blur: [];
+  setActive: [id: string];
+  clearActive: [];
 }>();
 
 const localRule = ref<CssRule>(JSON.parse(JSON.stringify(props.rule)));
@@ -77,8 +78,19 @@ watch(
   { deep: true }
 );
 
-function handleRuleClick() {
-  emit("focus");
+function handleRuleClick(event: Event) {
+  // Only activate/toggle if clicking on the rule editor itself, not on inputs
+  const target = event.target as HTMLElement;
+  if (!target.matches("input, button")) {
+    emit("setActive", props.rule.id);
+  }
+}
+
+function handleFocus() {
+  // Only set active, don't toggle on focus
+  if (!props.isActive) {
+    emit("setActive", props.rule.id);
+  }
 }
 
 function updateRule() {
@@ -94,7 +106,7 @@ function addDeclaration() {
     property: "",
     value: "",
   });
-  emit("focus"); // Focus when adding new declaration
+  emit("setActive", props.rule.id);
 }
 
 function removeDeclaration(index: number) {
@@ -124,6 +136,7 @@ function removeDeclaration(index: number) {
   border-color: #ffc107;
   background: #fffbf0;
   box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+  transform: translateX(2px);
 }
 
 .css-rule-editor.active::before {
@@ -154,6 +167,7 @@ function removeDeclaration(index: number) {
   color: #d73a49;
   background: #f8f9fa;
   transition: border-color 0.2s;
+  cursor: text;
 }
 
 .selector-input:focus {
@@ -200,6 +214,7 @@ function removeDeclaration(index: number) {
   font-family: "Fira Code", "Monaco", "Consolas", monospace;
   font-size: 13px;
   transition: border-color 0.2s;
+  cursor: text;
 }
 
 .property-input {

@@ -99,7 +99,7 @@
 
     <!-- Edit Screen -->
     <div v-if="currentStep === 'edit'" class="edit-screen">
-      <div class="edit-layout">
+      <div class="edit-layout" @click="handleBackgroundClick">
         <!-- Left Panel: Rules Editor -->
         <div class="rules-panel">
           <div class="panel-header">
@@ -128,8 +128,8 @@
                 :isActive="activeRuleId === rule.id"
                 @update="updateRule"
                 @remove="removeRule(rule.id)"
-                @focus="setActiveRule(rule.id)"
-                @blur="clearActiveRule"
+                @setActive="setActiveRule"
+                @clearActive="clearActiveRule"
               />
             </div>
 
@@ -321,14 +321,63 @@ const formattedCss = computed(() => {
   return rulesToCss(cssRules.value);
 });
 
-// Highlight CSS with active rule emphasis
+// Improved CSS highlighting with better active rule detection
 const highlightedCss = computed(() => {
   if (!formattedCss.value) return "";
 
-  let css = formattedCss.value;
+  // If there's an active rule, we need to highlight it before applying syntax highlighting
+  let cssToHighlight = formattedCss.value;
+  let ruleHighlightMap: Map<number, boolean> = new Map();
 
-  // Apply basic CSS syntax highlighting
-  css = css
+  // Find the active rule's position in the original CSS
+  if (activeRuleId.value) {
+    const activeRule = cssRules.value.find(
+      (rule) => rule.id === activeRuleId.value
+    );
+
+    if (activeRule) {
+      console.log("Highlighting rule with selector:", activeRule.selector);
+
+      // Split CSS into lines to find the active rule
+      const lines = cssToHighlight.split("\n");
+      let ruleStartIndex = -1;
+      let ruleEndIndex = -1;
+      let foundRule = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Look for exact selector match (the format is "selector {")
+        if (!foundRule && line.trim() === `${activeRule.selector} {`) {
+          console.log("Found rule start at line:", i, "Line content:", line);
+          foundRule = true;
+          ruleStartIndex = i;
+        }
+
+        // If we found the rule start, look for the closing brace
+        if (foundRule && ruleEndIndex === -1) {
+          if (line.trim() === "}") {
+            console.log("Found rule end at line:", i);
+            ruleEndIndex = i;
+            break;
+          }
+        }
+      }
+
+      // Mark lines for highlighting
+      if (ruleStartIndex !== -1 && ruleEndIndex !== -1) {
+        console.log(`Highlighting lines ${ruleStartIndex} to ${ruleEndIndex}`);
+        for (let i = ruleStartIndex; i <= ruleEndIndex; i++) {
+          ruleHighlightMap.set(i, true);
+        }
+      } else {
+        console.log("Could not find complete rule block");
+      }
+    }
+  }
+
+  // Apply syntax highlighting
+  let css = cssToHighlight
     // Highlight selectors
     .replace(/^([^{]+)(?=\s*\{)/gm, '<span class="css-selector">$1</span>')
     // Highlight properties
@@ -341,19 +390,15 @@ const highlightedCss = computed(() => {
     // Highlight braces
     .replace(/([{}])/g, '<span class="css-brace">$1</span>');
 
-  // Highlight active rule if one is selected
-  if (activeRuleId.value) {
-    const activeRule = cssRules.value.find(
-      (rule) => rule.id === activeRuleId.value
-    );
-    if (activeRule) {
-      const selectorPattern = escapeRegExp(activeRule.selector);
-      const rulePattern = new RegExp(
-        `(<span class="css-selector">${selectorPattern}</span>\\s*<span class="css-brace">\\{</span>[^}]*<span class="css-brace">\\}</span>)`,
-        "g"
-      );
-      css = css.replace(rulePattern, '<div class="active-rule">$1</div>');
+  // Apply active rule highlighting
+  if (ruleHighlightMap.size > 0) {
+    const lines = css.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      if (ruleHighlightMap.has(i)) {
+        lines[i] = `<div class="active-rule-line">${lines[i]}</div>`;
+      }
     }
+    css = lines.join("\n");
   }
 
   return css;
@@ -417,6 +462,7 @@ function parseJson() {
 
 function goBackToInput() {
   currentStep.value = "input";
+  activeRuleId.value = null;
 }
 
 function updateRule(updatedRule: CssRule) {
@@ -464,17 +510,37 @@ function addRule() {
   }
 }
 
+// Improved active rule management with toggle functionality
 function setActiveRule(ruleId: string) {
+  // Toggle functionality: if clicking the same rule, deselect it
+  if (activeRuleId.value === ruleId) {
+    console.log("Deselecting active rule:", ruleId);
+    activeRuleId.value = null;
+    return;
+  }
+
+  console.log("Setting active rule:", ruleId);
+  const rule = cssRules.value.find((r) => r.id === ruleId);
+  if (rule) {
+    console.log("Active rule selector:", rule.selector);
+  }
   activeRuleId.value = ruleId;
 }
 
 function clearActiveRule() {
-  // Don't immediately clear - let the new focus take over
-  setTimeout(() => {
-    if (!document.activeElement?.closest(".css-rule-editor")) {
-      activeRuleId.value = null;
-    }
-  }, 100);
+  console.log("Clearing active rule");
+  activeRuleId.value = null;
+}
+
+function handleBackgroundClick(event: Event) {
+  // Clear active rule when clicking on background (but not on rule editors)
+  const target = event.target as HTMLElement;
+  if (
+    !target.closest(".css-rule-editor") &&
+    !target.closest(".add-rule-form")
+  ) {
+    clearActiveRule();
+  }
 }
 
 async function copyCssToClipboard() {
@@ -1004,12 +1070,53 @@ h1 {
   font-weight: bold;
 }
 
-:deep(.active-rule) {
-  background: rgba(255, 235, 59, 0.2);
+/* Improved active rule highlighting - continuous without gaps */
+:deep(.active-rule-line) {
+  background: rgba(255, 193, 7, 0.2);
   border-left: 4px solid #ffc107;
-  padding-left: 8px;
-  margin: 4px 0;
+  padding: 0 0 0 12px;
+  margin: 0;
+  border-radius: 0;
+  display: block;
+  position: relative;
+  line-height: 1.6;
+}
+
+:deep(.active-rule-line:first-of-type) {
+  border-radius: 4px 4px 0 0;
+  animation: highlight-pulse 0.6s ease-in;
+}
+
+:deep(.active-rule-line:last-of-type) {
+  border-radius: 0 0 4px 4px;
+}
+
+:deep(.active-rule-line:only-of-type) {
   border-radius: 4px;
+}
+
+:deep(.active-rule-line::before) {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(90deg, #ffc107, rgba(255, 193, 7, 0.5));
+}
+
+@keyframes highlight-pulse {
+  0% {
+    background: rgba(255, 193, 7, 0.4);
+    transform: translateX(2px);
+  }
+  50% {
+    background: rgba(255, 193, 7, 0.3);
+  }
+  100% {
+    background: rgba(255, 193, 7, 0.2);
+    transform: translateX(0);
+  }
 }
 
 /* Modal Styles */
