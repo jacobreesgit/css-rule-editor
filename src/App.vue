@@ -48,12 +48,6 @@ body {
   background: #a8a8a8;
 }
 
-/* Focus styles for better accessibility */
-*:focus {
-  outline: 2px solid #007bff;
-  outline-offset: 2px;
-}
-
 button:focus,
 input:focus,
 textarea:focus {

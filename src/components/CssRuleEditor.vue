@@ -128,7 +128,6 @@ function removeDeclaration(index: number) {
 }
 
 .css-rule-editor:hover {
-  border-color: #007bff;
   box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
 }
 
