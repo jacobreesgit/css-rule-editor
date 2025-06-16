@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import type { CssRule } from "./types";
+import type { CssRule, CssDeclaration } from "../types";
 
 const props = defineProps<{
   rule: CssRule;
@@ -67,7 +67,7 @@ watch(
 function updateRule() {
   // Filter out empty declarations
   localRule.value.declarations = localRule.value.declarations.filter(
-    (decl) => decl.property && decl.value
+    (decl: CssDeclaration) => decl.property && decl.value
   );
   emit("update", localRule.value);
 }

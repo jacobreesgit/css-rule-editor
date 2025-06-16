@@ -5,10 +5,12 @@
     <div class="panels">
       <!-- JSON Input Panel -->
       <div class="panel">
-        <h2>JSON-Escaped Input</h2>
+        <h2>JSON or Property Input</h2>
         <textarea
           v-model="jsonInput"
-          placeholder='{ "customCss": ".my-class { color: red; }\\r\\n.another-class { font-size: 16px; }" }'
+          placeholder='Supports two formats:
+1. Complete JSON: { "customCss": ".my-class { color: red; }\\r\\n.another-class { font-size: 16px; }" }
+2. Property only: "customCss": ".my-class { color: red; }\\r\\n.another-class { font-size: 16px; }"'
           class="json-textarea"
         ></textarea>
         <button @click="parseJson" class="primary-btn">
@@ -99,15 +101,14 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import CssRuleEditor from "./CssRuleEditor.vue";
-import type { CssRule, CssDeclaration, CssData } from "./types";
+import type { CssRule, CssDeclaration, CssData } from "../types";
 import {
   parseEscapedCss,
   escapeForJson,
   parseCssToRules,
   rulesToCss,
-  formatCss,
   generateId,
-} from "./cssParser";
+} from "../cssParser";
 
 const jsonInput = ref("");
 const cssRules = ref<CssRule[]>([]);
@@ -130,37 +131,65 @@ const formattedCss = computed(() => {
 const canAddRule = computed(() => {
   return (
     newRule.value.selector &&
-    newRule.value.declarations.some((d) => d.property && d.value)
+    newRule.value.declarations.some(
+      (d: CssDeclaration) => d.property && d.value
+    )
   );
 });
 
 function parseJson() {
   try {
-    const data: CssData = JSON.parse(jsonInput.value);
-    if (!data.customCss) {
-      alert('Invalid JSON: missing "customCss" key');
-      return;
+    let cssValue: string;
+
+    // First, try to parse as a complete JSON object
+    try {
+      const data: CssData = JSON.parse(jsonInput.value);
+      if (!data.customCss) {
+        alert('Invalid JSON: missing "customCss" key');
+        return;
+      }
+      cssValue = data.customCss;
+    } catch (fullJsonError) {
+      // If that fails, try to parse as just the "customCss": "..." format
+      const input = jsonInput.value.trim();
+      const customCssMatch = input.match(
+        /^"customCss"\s*:\s*("(?:[^"\\]|\\.)*")\s*,?$/
+      );
+
+      if (customCssMatch) {
+        // Extract and parse the CSS value
+        cssValue = JSON.parse(customCssMatch[1]);
+      } else {
+        // If neither format works, show error
+        alert(
+          'Invalid format. Please provide either:\n1. A complete JSON object: { "customCss": "..." }\n2. Just the property: "customCss": "..."'
+        );
+        console.error("Parse error:", fullJsonError);
+        return;
+      }
     }
 
-    const decodedCss = parseEscapedCss(data.customCss);
+    const decodedCss = parseEscapedCss(cssValue);
     cssRules.value = parseCssToRules(decodedCss);
     isParsed.value = true;
     exportedJson.value = "";
   } catch (error) {
-    alert("Invalid JSON format. Please check your input.");
+    alert("Error processing CSS. Please check your input format.");
     console.error(error);
   }
 }
 
 function updateRule(updatedRule: CssRule) {
-  const index = cssRules.value.findIndex((r) => r.id === updatedRule.id);
+  const index = cssRules.value.findIndex(
+    (r: CssRule) => r.id === updatedRule.id
+  );
   if (index !== -1) {
     cssRules.value[index] = updatedRule;
   }
 }
 
 function removeRule(ruleId: string) {
-  cssRules.value = cssRules.value.filter((r) => r.id !== ruleId);
+  cssRules.value = cssRules.value.filter((r: CssRule) => r.id !== ruleId);
 }
 
 function addNewDeclaration() {
@@ -173,7 +202,7 @@ function removeNewDeclaration(index: number) {
 
 function addRule() {
   const validDeclarations = newRule.value.declarations.filter(
-    (d) => d.property && d.value
+    (d: CssDeclaration) => d.property && d.value
   );
 
   if (newRule.value.selector && validDeclarations.length > 0) {
