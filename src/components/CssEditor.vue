@@ -2,96 +2,144 @@
   <div class="css-editor-container">
     <h1>CSS Rule Editor</h1>
 
-    <div class="panels">
-      <!-- JSON Input Panel -->
-      <div class="panel">
-        <h2>JSON or Property Input</h2>
-        <textarea
-          v-model="jsonInput"
-          placeholder='Supports two formats:
+    <div class="editor-layout">
+      <!-- Left Panel: Input & Rules -->
+      <div class="left-panel">
+        <!-- JSON Input Section -->
+        <div class="input-section">
+          <h2>JSON or Property Input</h2>
+          <textarea
+            v-model="jsonInput"
+            placeholder='Supports two formats:
 1. Complete JSON: { "customCss": ".my-class { color: red; }\\r\\n.another-class { font-size: 16px; }" }
 2. Property only: "customCss": ".my-class { color: red; }\\r\\n.another-class { font-size: 16px; }"'
-          class="json-textarea"
-        ></textarea>
-        <button @click="parseJson" class="primary-btn">
-          Parse & Decode CSS
-        </button>
-      </div>
-
-      <!-- CSS Preview Panel -->
-      <div class="panel">
-        <h2>Formatted CSS Preview</h2>
-        <pre class="css-preview">{{ formattedCss || "No CSS parsed yet" }}</pre>
-      </div>
-    </div>
-
-    <!-- Rule Editor Panel -->
-    <div class="rule-editor-panel" v-if="cssRules.length > 0 || isParsed">
-      <h2>CSS Rules</h2>
-
-      <div class="rules-list">
-        <CssRuleEditor
-          v-for="rule in cssRules"
-          :key="rule.id"
-          :rule="rule"
-          @update="updateRule"
-          @remove="removeRule(rule.id)"
-        />
-      </div>
-
-      <!-- Add New Rule Form -->
-      <div class="add-rule-form">
-        <h3>Add New Rule</h3>
-        <input
-          v-model="newRule.selector"
-          placeholder="CSS Selector (e.g., .my-class)"
-          class="input-field"
-        />
-        <div class="new-declarations">
-          <div
-            v-for="(decl, index) in newRule.declarations"
-            :key="index"
-            class="new-declaration"
-          >
-            <input
-              v-model="decl.property"
-              placeholder="property"
-              class="input-field small"
-            />
-            <span>:</span>
-            <input
-              v-model="decl.value"
-              placeholder="value"
-              class="input-field small"
-            />
-            <button
-              @click="removeNewDeclaration(index)"
-              class="remove-btn small"
-            >
-              ×
-            </button>
-          </div>
-          <button @click="addNewDeclaration" class="secondary-btn">
-            + Add Declaration
+            class="json-textarea"
+          ></textarea>
+          <button @click="parseJson" class="primary-btn">
+            Parse & Decode CSS
           </button>
         </div>
-        <button @click="addRule" class="primary-btn" :disabled="!canAddRule">
-          Add Rule
-        </button>
+
+        <!-- CSS Rules Section -->
+        <div class="rules-section" v-if="cssRules.length > 0 || isParsed">
+          <h2>CSS Rules</h2>
+
+          <div class="rules-list">
+            <CssRuleEditor
+              v-for="rule in cssRules"
+              :key="rule.id"
+              :rule="rule"
+              :isActive="activeRuleId === rule.id"
+              @update="updateRule"
+              @remove="removeRule(rule.id)"
+              @focus="setActiveRule(rule.id)"
+              @blur="clearActiveRule"
+            />
+          </div>
+
+          <!-- Add New Rule Form -->
+          <div class="add-rule-form">
+            <h3>Add New Rule</h3>
+            <input
+              v-model="newRule.selector"
+              placeholder="CSS Selector (e.g., .my-class)"
+              class="input-field"
+            />
+            <div class="new-declarations">
+              <div
+                v-for="(decl, index) in newRule.declarations"
+                :key="index"
+                class="new-declaration"
+              >
+                <input
+                  v-model="decl.property"
+                  placeholder="property"
+                  class="input-field small"
+                />
+                <span>:</span>
+                <input
+                  v-model="decl.value"
+                  placeholder="value"
+                  class="input-field small"
+                />
+                <button
+                  @click="removeNewDeclaration(index)"
+                  class="remove-btn small"
+                >
+                  ×
+                </button>
+              </div>
+              <button @click="addNewDeclaration" class="secondary-btn">
+                + Add Declaration
+              </button>
+            </div>
+            <button
+              @click="addRule"
+              class="primary-btn"
+              :disabled="!canAddRule"
+            >
+              Add Rule
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- Export Panel -->
-      <div class="export-panel">
-        <h3>Export JSON</h3>
-        <button @click="exportToJson" class="primary-btn">
-          Re-encode to JSON Format
-        </button>
-        <div v-if="exportedJson" class="export-result">
-          <h4>Exported JSON:</h4>
-          <pre class="json-output">{{ exportedJson }}</pre>
-          <button @click="copyToClipboard" class="secondary-btn">
-            Copy to Clipboard
+      <!-- Right Panel: Formatted CSS Preview -->
+      <div class="right-panel">
+        <div class="preview-header">
+          <h2>Formatted CSS Preview</h2>
+          <button
+            @click="copyCssToClipboard"
+            class="copy-btn"
+            :disabled="!formattedCss"
+            title="Copy CSS to clipboard"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              ></path>
+            </svg>
+            Copy
           </button>
+        </div>
+
+        <div class="css-preview-container">
+          <pre class="css-preview" v-html="highlightedCss"></pre>
+          <div v-if="!formattedCss" class="empty-state">
+            No CSS parsed yet. Enter JSON above and click "Parse & Decode CSS".
+          </div>
+        </div>
+
+        <!-- Auto-Export JSON Section -->
+        <div class="auto-export-section" v-if="formattedCss">
+          <h3>Auto-Generated JSON</h3>
+          <div class="json-export-container">
+            <pre class="json-output">{{ autoExportedJson }}</pre>
+            <button @click="copyJsonToClipboard" class="copy-btn small">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                ></path>
+              </svg>
+              Copy JSON
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -99,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import CssRuleEditor from "./CssRuleEditor.vue";
 import type { CssRule, CssDeclaration, CssData } from "../types";
 import {
@@ -113,7 +161,7 @@ import {
 const jsonInput = ref("");
 const cssRules = ref<CssRule[]>([]);
 const isParsed = ref(false);
-const exportedJson = ref("");
+const activeRuleId = ref<string | null>(null);
 
 const newRule = ref<{
   selector: string;
@@ -128,6 +176,53 @@ const formattedCss = computed(() => {
   return rulesToCss(cssRules.value);
 });
 
+// Auto-generate JSON whenever CSS changes
+const autoExportedJson = computed(() => {
+  if (!formattedCss.value) return "";
+  const css = formattedCss.value;
+  const escapedCss = escapeForJson(css);
+  const jsonData: CssData = { customCss: escapedCss };
+  return JSON.stringify(jsonData, null, 2);
+});
+
+// Highlight CSS with active rule emphasis
+const highlightedCss = computed(() => {
+  if (!formattedCss.value) return "";
+
+  let css = formattedCss.value;
+
+  // Apply basic CSS syntax highlighting
+  css = css
+    // Highlight selectors
+    .replace(/^([^{]+)(?=\s*\{)/gm, '<span class="css-selector">$1</span>')
+    // Highlight properties
+    .replace(
+      /(\s+)([a-zA-Z-]+)(\s*:)/g,
+      '$1<span class="css-property">$2</span>$3'
+    )
+    // Highlight values
+    .replace(/(:)(\s*)([^;]+)(;)/g, '$1$2<span class="css-value">$3</span>$4')
+    // Highlight braces
+    .replace(/([{}])/g, '<span class="css-brace">$1</span>');
+
+  // Highlight active rule if one is selected
+  if (activeRuleId.value) {
+    const activeRule = cssRules.value.find(
+      (rule) => rule.id === activeRuleId.value
+    );
+    if (activeRule) {
+      const selectorPattern = escapeRegExp(activeRule.selector);
+      const rulePattern = new RegExp(
+        `(<span class="css-selector">${selectorPattern}</span>\\s*<span class="css-brace">\\{</span>[^}]*<span class="css-brace">\\}</span>)`,
+        "g"
+      );
+      css = css.replace(rulePattern, '<div class="active-rule">$1</div>');
+    }
+  }
+
+  return css;
+});
+
 const canAddRule = computed(() => {
   return (
     newRule.value.selector &&
@@ -136,6 +231,11 @@ const canAddRule = computed(() => {
     )
   );
 });
+
+// Helper function to escape regex special characters
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function parseJson() {
   try {
@@ -172,7 +272,6 @@ function parseJson() {
     const decodedCss = parseEscapedCss(cssValue);
     cssRules.value = parseCssToRules(decodedCss);
     isParsed.value = true;
-    exportedJson.value = "";
   } catch (error) {
     alert("Error processing CSS. Please check your input format.");
     console.error(error);
@@ -190,6 +289,9 @@ function updateRule(updatedRule: CssRule) {
 
 function removeRule(ruleId: string) {
   cssRules.value = cssRules.value.filter((r: CssRule) => r.id !== ruleId);
+  if (activeRuleId.value === ruleId) {
+    activeRuleId.value = null;
+  }
 }
 
 function addNewDeclaration() {
@@ -206,11 +308,12 @@ function addRule() {
   );
 
   if (newRule.value.selector && validDeclarations.length > 0) {
-    cssRules.value.push({
+    const newRuleObj = {
       id: generateId(),
       selector: newRule.value.selector,
       declarations: validDeclarations,
-    });
+    };
+    cssRules.value.push(newRuleObj);
 
     // Reset form
     newRule.value = {
@@ -220,28 +323,42 @@ function addRule() {
   }
 }
 
-function exportToJson() {
-  const css = rulesToCss(cssRules.value);
-  const escapedCss = escapeForJson(css);
-  const jsonData: CssData = { customCss: escapedCss };
-  exportedJson.value = JSON.stringify(jsonData, null, 2);
+function setActiveRule(ruleId: string) {
+  activeRuleId.value = ruleId;
 }
 
-function copyToClipboard() {
-  navigator.clipboard
-    .writeText(exportedJson.value)
-    .then(() => {
-      alert("Copied to clipboard!");
-    })
-    .catch(() => {
-      alert("Failed to copy to clipboard");
-    });
+function clearActiveRule() {
+  // Don't immediately clear - let the new focus take over
+  setTimeout(() => {
+    if (!document.activeElement?.closest(".css-rule-editor")) {
+      activeRuleId.value = null;
+    }
+  }, 100);
+}
+
+async function copyCssToClipboard() {
+  try {
+    await navigator.clipboard.writeText(formattedCss.value);
+    // You could add a toast notification here
+    console.log("CSS copied to clipboard!");
+  } catch (err) {
+    console.error("Failed to copy CSS: ", err);
+  }
+}
+
+async function copyJsonToClipboard() {
+  try {
+    await navigator.clipboard.writeText(autoExportedJson.value);
+    console.log("JSON copied to clipboard!");
+  } catch (err) {
+    console.error("Failed to copy JSON: ", err);
+  }
 }
 </script>
 
 <style scoped>
 .css-editor-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -250,37 +367,164 @@ function copyToClipboard() {
 h1 {
   color: #333;
   margin-bottom: 24px;
+  text-align: center;
 }
 
-h2 {
-  color: #555;
-  font-size: 20px;
-  margin-bottom: 12px;
-}
-
-h3 {
-  color: #666;
-  font-size: 18px;
-  margin-bottom: 10px;
-}
-
-.panels {
+.editor-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 30px;
+  gap: 24px;
+  min-height: 600px;
 }
 
-.panel {
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+}
+
+.input-section,
+.rules-section {
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 16px;
   background: white;
 }
 
+.rules-section {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.preview-header h2 {
+  margin: 0;
+  flex: 1;
+}
+
+.copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.copy-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.copy-btn.small {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.css-preview-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.css-preview {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  margin: 0;
+  background: #f8f9fa;
+  font-family: "Fira Code", "Monaco", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  border: none;
+}
+
+.empty-state {
+  padding: 40px 16px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.auto-export-section {
+  border-top: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.auto-export-section h3 {
+  margin: 0 0 12px 0;
+  padding: 16px 16px 0 16px;
+  color: #666;
+  font-size: 16px;
+}
+
+.json-export-container {
+  position: relative;
+}
+
+.json-output {
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 12px 16px;
+  margin: 0;
+  font-family: "Fira Code", "Monaco", "Consolas", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.json-export-container .copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 123, 255, 0.8);
+}
+
+h2 {
+  color: #555;
+  font-size: 18px;
+  margin: 0 0 12px 0;
+}
+
+h3 {
+  color: #666;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
 .json-textarea {
   width: 100%;
-  height: 200px;
+  height: 150px;
   padding: 12px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -290,34 +534,16 @@ h3 {
   margin-bottom: 12px;
 }
 
-.css-preview {
-  background: #f5f5f5;
-  padding: 12px;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 13px;
-  white-space: pre-wrap;
+.rules-list {
+  margin-bottom: 20px;
   max-height: 400px;
   overflow-y: auto;
-  margin: 0;
-}
-
-.rule-editor-panel {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 20px;
-  background: white;
-}
-
-.rules-list {
-  margin-bottom: 24px;
 }
 
 .add-rule-form {
   border: 2px dashed #ccc;
   border-radius: 8px;
   padding: 16px;
-  margin-bottom: 24px;
   background: #fafafa;
 }
 
@@ -405,24 +631,43 @@ h3 {
   background: #c82333;
 }
 
-.export-panel {
-  border-top: 1px solid #eee;
-  padding-top: 20px;
+/* CSS Syntax Highlighting */
+:deep(.css-selector) {
+  color: #d73a49;
+  font-weight: 600;
 }
 
-.export-result {
-  margin-top: 16px;
+:deep(.css-property) {
+  color: #005cc5;
+  font-weight: 500;
 }
 
-.json-output {
-  background: #f5f5f5;
-  padding: 12px;
+:deep(.css-value) {
+  color: #032f62;
+}
+
+:deep(.css-brace) {
+  color: #6f42c1;
+  font-weight: bold;
+}
+
+:deep(.active-rule) {
+  background: rgba(255, 235, 59, 0.2);
+  border-left: 4px solid #ffc107;
+  padding-left: 8px;
+  margin: 4px 0;
   border-radius: 4px;
-  font-family: monospace;
-  font-size: 13px;
-  white-space: pre-wrap;
-  max-height: 300px;
-  overflow-y: auto;
-  margin: 12px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .editor-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .right-panel {
+    order: -1;
+  }
 }
 </style>
