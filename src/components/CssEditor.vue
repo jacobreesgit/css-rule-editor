@@ -117,30 +117,6 @@
             No CSS parsed yet. Enter JSON above and click "Parse & Decode CSS".
           </div>
         </div>
-
-        <!-- Auto-Export JSON Section -->
-        <div class="auto-export-section" v-if="formattedCss">
-          <h3>Auto-Generated JSON</h3>
-          <div class="json-export-container">
-            <pre class="json-output">{{ autoExportedJson }}</pre>
-            <button @click="copyJsonToClipboard" class="copy-btn small">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path
-                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                ></path>
-              </svg>
-              Copy JSON
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -174,15 +150,6 @@ const newRule = ref<{
 const formattedCss = computed(() => {
   if (cssRules.value.length === 0) return "";
   return rulesToCss(cssRules.value);
-});
-
-// Auto-generate JSON whenever CSS changes
-const autoExportedJson = computed(() => {
-  if (!formattedCss.value) return "";
-  const css = formattedCss.value;
-  const escapedCss = escapeForJson(css);
-  const jsonData: CssData = { customCss: escapedCss };
-  return JSON.stringify(jsonData, null, 2);
 });
 
 // Highlight CSS with active rule emphasis
@@ -345,15 +312,6 @@ async function copyCssToClipboard() {
     console.error("Failed to copy CSS: ", err);
   }
 }
-
-async function copyJsonToClipboard() {
-  try {
-    await navigator.clipboard.writeText(autoExportedJson.value);
-    console.log("JSON copied to clipboard!");
-  } catch (err) {
-    console.error("Failed to copy JSON: ", err);
-  }
-}
 </script>
 
 <style scoped>
@@ -442,11 +400,6 @@ h1 {
   cursor: not-allowed;
 }
 
-.copy-btn.small {
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
 .css-preview-container {
   flex: 1;
   overflow: hidden;
@@ -472,42 +425,6 @@ h1 {
   text-align: center;
   color: #666;
   font-style: italic;
-}
-
-.auto-export-section {
-  border-top: 1px solid #eee;
-  background: #f8f9fa;
-}
-
-.auto-export-section h3 {
-  margin: 0 0 12px 0;
-  padding: 16px 16px 0 16px;
-  color: #666;
-  font-size: 16px;
-}
-
-.json-export-container {
-  position: relative;
-}
-
-.json-output {
-  background: #2d3748;
-  color: #e2e8f0;
-  padding: 12px 16px;
-  margin: 0;
-  font-family: "Fira Code", "Monaco", "Consolas", monospace;
-  font-size: 12px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.json-export-container .copy-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0, 123, 255, 0.8);
 }
 
 h2 {
