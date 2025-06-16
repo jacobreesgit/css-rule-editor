@@ -136,7 +136,14 @@
             <!-- Add New Rule Button -->
             <div class="add-rule-section">
               <button @click="openAddRuleModal" class="add-rule-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
@@ -294,7 +301,11 @@
     </div>
 
     <!-- Add New Rule Modal -->
-    <div v-if="showAddRuleModal" class="modal-overlay" @click="closeAddRuleModal">
+    <div
+      v-if="showAddRuleModal"
+      class="modal-overlay"
+      @click="closeAddRuleModal"
+    >
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h3>Add New CSS Rule</h3>
@@ -310,7 +321,7 @@
               @keydown.enter="focusFirstDeclaration"
               id="selectorInput"
             />
-            
+
             <label class="form-label">CSS Declarations</label>
             <div class="new-declarations">
               <div
@@ -340,7 +351,14 @@
                 </button>
               </div>
               <button @click="addNewDeclaration" class="add-declaration-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
@@ -350,18 +368,25 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            @click="addRule"
-            class="primary-btn"
-            :disabled="!canAddRule"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button @click="addRule" class="primary-btn" :disabled="!canAddRule">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <polyline points="9,11 12,14 22,4"></polyline>
-              <path d="M21,12v7a2,2 0,0 1,-2,2H5a2,2 0,0 1,-2,-2V5a2,2 0,0 1,2,-2h11"></path>
+              <path
+                d="M21,12v7a2,2 0,0 1,-2,2H5a2,2 0,0 1,-2,-2V5a2,2 0,0 1,2,-2h11"
+              ></path>
             </svg>
             Add Rule
           </button>
-          <button @click="closeAddRuleModal" class="secondary-btn">Cancel</button>
+          <button @click="closeAddRuleModal" class="secondary-btn">
+            Cancel
+          </button>
         </div>
       </div>
     </div>
@@ -700,7 +725,9 @@ function openAddRuleModal(): void {
   showAddRuleModal.value = true;
   // Focus the selector input after modal opens
   setTimeout(() => {
-    const selectorInput = document.getElementById('selectorInput') as HTMLInputElement;
+    const selectorInput = document.getElementById(
+      "selectorInput"
+    ) as HTMLInputElement;
     if (selectorInput) {
       selectorInput.focus();
     }
@@ -731,8 +758,10 @@ function closeAddRuleModal(): void {
 
 h1 {
   color: #333;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   text-align: center;
+  font-size: 24px;
+  flex-shrink: 0;
 }
 
 /* Step Indicator */
@@ -740,8 +769,9 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   padding: 0 20px;
+  flex-shrink: 0;
 }
 
 .step {
@@ -815,7 +845,10 @@ h1 {
 .input-screen {
   display: flex;
   justify-content: center;
-  padding: 40px 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 16px;
 }
 
 .input-card {
@@ -823,26 +856,31 @@ h1 {
   width: 100%;
   background: white;
   border-radius: 12px;
-  padding: 32px;
+  padding: 24px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .input-description {
   color: #666;
-  margin-bottom: 20px;
-  font-size: 16px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  flex-shrink: 0;
 }
 
 .format-examples {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   background: #f8f9fa;
   border-radius: 8px;
-  padding: 20px;
+  padding: 16px;
+  flex-shrink: 0;
 }
 
 .format-example {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .format-example:last-child {
@@ -850,8 +888,8 @@ h1 {
 }
 
 .format-example h4 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
+  margin: 0 0 6px 0;
+  font-size: 13px;
   color: #333;
 }
 
@@ -860,23 +898,24 @@ h1 {
   background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
-  padding: 12px;
+  padding: 10px;
   font-family: "Fira Code", "Monaco", "Consolas", monospace;
-  font-size: 13px;
+  font-size: 12px;
   color: #666;
   word-break: break-all;
 }
 
 .json-textarea {
   width: 100%;
-  height: 200px;
+  flex: 1;
+  min-height: 120px;
   padding: 16px;
   border: 2px solid #ddd;
   border-radius: 8px;
   font-family: "Fira Code", "Monaco", "Consolas", monospace;
   font-size: 14px;
-  resize: vertical;
-  margin-bottom: 20px;
+  resize: none;
+  margin-bottom: 16px;
   transition: border-color 0.2s ease;
 }
 
@@ -890,6 +929,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .keyboard-hint {
@@ -920,6 +960,7 @@ h1 {
   border-radius: 6px;
   color: #c53030;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 /* Edit Screen */
@@ -1432,15 +1473,20 @@ h1 {
 
 @media (max-width: 768px) {
   .css-editor-container {
-    padding: 16px;
+    padding: 12px;
   }
 
   .input-card {
-    padding: 24px;
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: 20px;
+    margin-bottom: 12px;
   }
 
   .step-indicator {
-    margin-bottom: 24px;
+    margin-bottom: 16px;
   }
 
   .step-connector {
