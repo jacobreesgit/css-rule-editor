@@ -47,7 +47,7 @@
 
         <textarea
           v-model="jsonInput"
-          placeholder="Paste your JSON here..."
+          placeholder="Paste your input here..."
           class="json-textarea"
           @keydown.ctrl.enter="parseJson"
           @keydown.meta.enter="parseJson"
