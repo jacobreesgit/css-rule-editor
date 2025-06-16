@@ -281,7 +281,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, type Ref, type ComputedRef } from "vue";
 import CssRuleEditor from "./CssRuleEditor.vue";
 import type { CssRule, CssDeclaration, CssData } from "../types";
 import {
@@ -292,37 +292,43 @@ import {
   generateId,
 } from "../cssParser";
 
-// Screen state
-const currentStep = ref<"input" | "edit">("input");
-const isParsed = ref(false);
+// Explicit type definitions for better TypeScript support
+type StepType = "input" | "edit";
 
-// Input state
-const jsonInput = ref("");
-const parseError = ref("");
-
-// Editor state
-const cssRules = ref<CssRule[]>([]);
-const activeRuleId = ref<string | null>(null);
-
-// Export state
-const showExportModal = ref(false);
-const exportedJson = ref("");
-
-const newRule = ref<{
+interface NewRuleData {
   selector: string;
   declarations: CssDeclaration[];
-}>({
+}
+
+// Screen state with explicit types
+const currentStep: Ref<StepType> = ref<StepType>("input");
+const isParsed: Ref<boolean> = ref<boolean>(false);
+
+// Input state with explicit types
+const jsonInput: Ref<string> = ref<string>("");
+const parseError: Ref<string> = ref<string>("");
+
+// Editor state with explicit types
+const cssRules: Ref<CssRule[]> = ref<CssRule[]>([]);
+const activeRuleId: Ref<string | null> = ref<string | null>(null);
+
+// Export state with explicit types
+const showExportModal: Ref<boolean> = ref<boolean>(false);
+const exportedJson: Ref<string> = ref<string>("");
+
+const newRule: Ref<NewRuleData> = ref<NewRuleData>({
   selector: "",
   declarations: [{ property: "", value: "" }],
 });
 
-const formattedCss = computed(() => {
+// Computed properties with explicit types
+const formattedCss: ComputedRef<string> = computed<string>(() => {
   if (cssRules.value.length === 0) return "";
   return rulesToCss(cssRules.value);
 });
 
 // Improved CSS highlighting with better active rule detection
-const highlightedCss = computed(() => {
+const highlightedCss: ComputedRef<string> = computed<string>(() => {
   if (!formattedCss.value) return "";
 
   // If there's an active rule, we need to highlight it before applying syntax highlighting
@@ -404,7 +410,7 @@ const highlightedCss = computed(() => {
   return css;
 });
 
-const canAddRule = computed(() => {
+const canAddRule: ComputedRef<boolean> = computed<boolean>(() => {
   return (
     newRule.value.selector &&
     newRule.value.declarations.some(
@@ -413,12 +419,8 @@ const canAddRule = computed(() => {
   );
 });
 
-// Helper function to escape regex special characters
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function parseJson() {
+// Functions with explicit typing
+function parseJson(): void {
   parseError.value = "";
 
   try {
@@ -460,12 +462,12 @@ function parseJson() {
   }
 }
 
-function goBackToInput() {
+function goBackToInput(): void {
   currentStep.value = "input";
   activeRuleId.value = null;
 }
 
-function updateRule(updatedRule: CssRule) {
+function updateRule(updatedRule: CssRule): void {
   const index = cssRules.value.findIndex(
     (r: CssRule) => r.id === updatedRule.id
   );
@@ -474,28 +476,28 @@ function updateRule(updatedRule: CssRule) {
   }
 }
 
-function removeRule(ruleId: string) {
+function removeRule(ruleId: string): void {
   cssRules.value = cssRules.value.filter((r: CssRule) => r.id !== ruleId);
   if (activeRuleId.value === ruleId) {
     activeRuleId.value = null;
   }
 }
 
-function addNewDeclaration() {
+function addNewDeclaration(): void {
   newRule.value.declarations.push({ property: "", value: "" });
 }
 
-function removeNewDeclaration(index: number) {
+function removeNewDeclaration(index: number): void {
   newRule.value.declarations.splice(index, 1);
 }
 
-function addRule() {
+function addRule(): void {
   const validDeclarations = newRule.value.declarations.filter(
     (d: CssDeclaration) => d.property && d.value
   );
 
   if (newRule.value.selector && validDeclarations.length > 0) {
-    const newRuleObj = {
+    const newRuleObj: CssRule = {
       id: generateId(),
       selector: newRule.value.selector,
       declarations: validDeclarations,
@@ -511,7 +513,7 @@ function addRule() {
 }
 
 // Improved active rule management with toggle functionality
-function setActiveRule(ruleId: string) {
+function setActiveRule(ruleId: string): void {
   // Toggle functionality: if clicking the same rule, deselect it
   if (activeRuleId.value === ruleId) {
     console.log("Deselecting active rule:", ruleId);
@@ -527,12 +529,12 @@ function setActiveRule(ruleId: string) {
   activeRuleId.value = ruleId;
 }
 
-function clearActiveRule() {
+function clearActiveRule(): void {
   console.log("Clearing active rule");
   activeRuleId.value = null;
 }
 
-function handleBackgroundClick(event: Event) {
+function handleBackgroundClick(event: Event): void {
   // Clear active rule when clicking on background (but not on rule editors)
   const target = event.target as HTMLElement;
   if (
@@ -543,7 +545,7 @@ function handleBackgroundClick(event: Event) {
   }
 }
 
-async function copyCssToClipboard() {
+async function copyCssToClipboard(): Promise<void> {
   try {
     await navigator.clipboard.writeText(formattedCss.value);
     // You could add a toast notification here
@@ -553,7 +555,7 @@ async function copyCssToClipboard() {
   }
 }
 
-function exportToJson() {
+function exportToJson(): void {
   const css = formattedCss.value;
   const escapedCss = escapeForJson(css);
   const jsonData = {
@@ -563,11 +565,11 @@ function exportToJson() {
   showExportModal.value = true;
 }
 
-function closeExportModal() {
+function closeExportModal(): void {
   showExportModal.value = false;
 }
 
-async function copyJsonToClipboard() {
+async function copyJsonToClipboard(): Promise<void> {
   try {
     await navigator.clipboard.writeText(exportedJson.value);
     closeExportModal();
@@ -577,12 +579,12 @@ async function copyJsonToClipboard() {
   }
 }
 
-function selectAllText(event: Event) {
+function selectAllText(event: Event): void {
   const textarea = event.target as HTMLTextAreaElement;
   textarea.select();
 }
 
-function focusFirstDeclaration() {
+function focusFirstDeclaration(): void {
   // Focus the first declaration property input when Enter is pressed on selector
   const firstPropertyInput = document.querySelector(
     '.new-declaration input[placeholder="property"]'
@@ -592,7 +594,7 @@ function focusFirstDeclaration() {
   }
 }
 
-function focusNextInput(event: Event) {
+function focusNextInput(event: Event): void {
   // Simple tab handling for declaration inputs
   const target = event.target as HTMLInputElement;
   const valueInput = target.nextElementSibling
