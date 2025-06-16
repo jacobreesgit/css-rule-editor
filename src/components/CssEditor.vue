@@ -721,8 +721,12 @@ function closeAddRuleModal(): void {
 .css-editor-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 20px 20px 0 20px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 h1 {
@@ -921,13 +925,19 @@ h1 {
 /* Edit Screen */
 .edit-screen {
   padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .edit-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-  min-height: 700px;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 20px;
 }
 
 .rules-panel,
@@ -938,6 +948,7 @@ h1 {
   border-radius: 8px;
   background: white;
   overflow: hidden;
+  min-height: 0;
 }
 
 .panel-header {
@@ -1017,20 +1028,22 @@ h1 {
 .rules-section {
   flex: 1;
   padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .rules-list {
   flex: 1;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .add-rule-section {
-  padding: 16px 0;
+  padding: 16px 0 0 0;
   border-top: 1px solid #eee;
+  flex-shrink: 0;
 }
 
 .add-rule-btn {
@@ -1189,8 +1202,8 @@ h1 {
 
 .css-preview-container {
   flex: 1;
-  overflow: hidden;
   position: relative;
+  min-height: 0;
 }
 
 .css-preview {
@@ -1205,6 +1218,7 @@ h1 {
   white-space: pre-wrap;
   overflow-y: auto;
   border: none;
+  box-sizing: border-box;
 }
 
 .empty-state {
@@ -1237,12 +1251,8 @@ h1 {
 /* Active rule highlighting - Block-level approach (no line spacing issues) */
 :deep(.active-rule-block) {
   background: rgba(255, 193, 7, 0.2);
-  border-left: 4px solid #ffc107;
-  padding-left: 12px;
-  margin: 4px 0;
   border-radius: 4px;
   display: inline-block;
-  width: calc(100% - 16px); /* Account for border and padding */
   white-space: pre-wrap;
   position: relative;
   animation: highlight-pulse 0.6s ease-in;
@@ -1252,14 +1262,12 @@ h1 {
 @keyframes highlight-pulse {
   0% {
     background: rgba(255, 193, 7, 0.4);
-    transform: translateX(2px);
   }
   50% {
     background: rgba(255, 193, 7, 0.3);
   }
   100% {
     background: rgba(255, 193, 7, 0.2);
-    transform: translateX(0);
   }
 }
 
