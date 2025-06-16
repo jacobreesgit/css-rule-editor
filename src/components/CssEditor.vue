@@ -133,51 +133,14 @@
               />
             </div>
 
-            <!-- Add New Rule Form -->
-            <div class="add-rule-form">
-              <h3>Add New Rule</h3>
-              <input
-                v-model="newRule.selector"
-                placeholder="CSS Selector (e.g., .my-class)"
-                class="input-field"
-                @keydown.enter="focusFirstDeclaration"
-              />
-              <div class="new-declarations">
-                <div
-                  v-for="(decl, index) in newRule.declarations"
-                  :key="index"
-                  class="new-declaration"
-                >
-                  <input
-                    v-model="decl.property"
-                    placeholder="property"
-                    class="input-field small"
-                    @keydown.tab.prevent="focusNextInput"
-                  />
-                  <span>:</span>
-                  <input
-                    v-model="decl.value"
-                    placeholder="value"
-                    class="input-field small"
-                    @keydown.enter="addRule"
-                  />
-                  <button
-                    @click="removeNewDeclaration(index)"
-                    class="remove-btn small"
-                  >
-                    ×
-                  </button>
-                </div>
-                <button @click="addNewDeclaration" class="secondary-btn">
-                  + Add Declaration
-                </button>
-              </div>
-              <button
-                @click="addRule"
-                class="primary-btn"
-                :disabled="!canAddRule"
-              >
-                Add Rule
+            <!-- Add New Rule Button -->
+            <div class="add-rule-section">
+              <button @click="openAddRuleModal" class="add-rule-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add New Rule
               </button>
             </div>
           </div>
@@ -329,6 +292,79 @@
         </div>
       </div>
     </div>
+
+    <!-- Add New Rule Modal -->
+    <div v-if="showAddRuleModal" class="modal-overlay" @click="closeAddRuleModal">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>Add New CSS Rule</h3>
+          <button @click="closeAddRuleModal" class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="add-rule-form">
+            <label class="form-label">CSS Selector</label>
+            <input
+              v-model="newRule.selector"
+              placeholder="e.g., .my-class, #my-id, div.container"
+              class="input-field"
+              @keydown.enter="focusFirstDeclaration"
+              id="selectorInput"
+            />
+            
+            <label class="form-label">CSS Declarations</label>
+            <div class="new-declarations">
+              <div
+                v-for="(decl, index) in newRule.declarations"
+                :key="index"
+                class="new-declaration"
+              >
+                <input
+                  v-model="decl.property"
+                  placeholder="property"
+                  class="input-field small"
+                  @keydown.tab.prevent="focusNextInput"
+                />
+                <span class="declaration-colon">:</span>
+                <input
+                  v-model="decl.value"
+                  placeholder="value"
+                  class="input-field small"
+                  @keydown.enter="addRule"
+                />
+                <button
+                  @click="removeNewDeclaration(index)"
+                  class="remove-btn small"
+                  :disabled="newRule.declarations.length === 1"
+                >
+                  ×
+                </button>
+              </div>
+              <button @click="addNewDeclaration" class="add-declaration-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add Declaration
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            @click="addRule"
+            class="primary-btn"
+            :disabled="!canAddRule"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9,11 12,14 22,4"></polyline>
+              <path d="M21,12v7a2,2 0,0 1,-2,2H5a2,2 0,0 1,-2,-2V5a2,2 0,0 1,2,-2h11"></path>
+            </svg>
+            Add Rule
+          </button>
+          <button @click="closeAddRuleModal" class="secondary-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -370,6 +406,9 @@ const showExportModal: Ref<boolean> = ref<boolean>(false);
 const exportedJson: Ref<string> = ref<string>("");
 const exportFormat: Ref<ExportFormatType> = ref<ExportFormatType>("complete");
 
+// Add Rule Modal state
+const showAddRuleModal: Ref<boolean> = ref<boolean>(false);
+
 const newRule: Ref<NewRuleData> = ref<NewRuleData>({
   selector: "",
   declarations: [{ property: "", value: "" }],
@@ -381,80 +420,77 @@ const formattedCss: ComputedRef<string> = computed<string>(() => {
   return rulesToCss(cssRules.value);
 });
 
-// Improved CSS highlighting with better active rule detection
+// Fixed CSS highlighting without line spacing issues
 const highlightedCss: ComputedRef<string> = computed<string>(() => {
   if (!formattedCss.value) return "";
 
-  // If there's an active rule, we need to highlight it before applying syntax highlighting
-  let cssToHighlight = formattedCss.value;
-  let ruleHighlightMap: Map<number, boolean> = new Map();
-
-  // Find the active rule's position in the original CSS
+  // If there's an active rule, we need to generate CSS with highlighting
   if (activeRuleId.value) {
-    const activeRule = cssRules.value.find(
+    const activeRuleIndex = cssRules.value.findIndex(
       (rule) => rule.id === activeRuleId.value
     );
 
-    if (activeRule) {
-      // Split CSS into lines to find the active rule
-      const lines = cssToHighlight.split("\n");
-      let ruleStartIndex = -1;
-      let ruleEndIndex = -1;
-      let foundRule = false;
+    if (activeRuleIndex !== -1) {
+      // Generate CSS with the active rule wrapped
+      const cssWithHighlight = cssRules.value
+        .map((rule, index) => {
+          const declarations = rule.declarations
+            .map((decl) => `  ${decl.property}: ${decl.value};`)
+            .join("\n");
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+          const ruleText = `${rule.selector} {\n${declarations}\n}`;
 
-        // Look for exact selector match (the format is "selector {")
-        if (!foundRule && line.trim() === `${activeRule.selector} {`) {
-          foundRule = true;
-          ruleStartIndex = i;
-        }
-
-        // If we found the rule start, look for the closing brace
-        if (foundRule && ruleEndIndex === -1) {
-          if (line.trim() === "}") {
-            ruleEndIndex = i;
-            break;
+          // Wrap the active rule
+          if (index === activeRuleIndex) {
+            return `<span class="active-rule-block">${ruleText}</span>`;
           }
-        }
-      }
+          return ruleText;
+        })
+        .join("\n\n");
 
-      // Mark lines for highlighting
-      if (ruleStartIndex !== -1 && ruleEndIndex !== -1) {
-        for (let i = ruleStartIndex; i <= ruleEndIndex; i++) {
-          ruleHighlightMap.set(i, true);
-        }
-      }
+      // Apply syntax highlighting to the CSS with active rule wrapped
+      return (
+        cssWithHighlight
+          // Highlight selectors (but not those inside active-rule-block)
+          .replace(
+            />([^{<]+)(?=\s*\{)/g,
+            '><span class="css-selector">$1</span>'
+          )
+          .replace(
+            /^([^{<]+)(?=\s*\{)/gm,
+            '<span class="css-selector">$1</span>'
+          )
+          // Highlight properties
+          .replace(
+            /(\s+)([a-zA-Z-]+)(\s*:)/g,
+            '$1<span class="css-property">$2</span>$3'
+          )
+          // Highlight values
+          .replace(
+            /(:)(\s*)([^;]+)(;)/g,
+            '$1$2<span class="css-value">$3</span>$4'
+          )
+          // Highlight braces
+          .replace(/([{}])/g, '<span class="css-brace">$1</span>')
+      );
     }
   }
 
-  // Apply syntax highlighting
-  let css = cssToHighlight
-    // Highlight selectors
-    .replace(/^([^{]+)(?=\s*\{)/gm, '<span class="css-selector">$1</span>')
-    // Highlight properties
-    .replace(
-      /(\s+)([a-zA-Z-]+)(\s*:)/g,
-      '$1<span class="css-property">$2</span>$3'
-    )
-    // Highlight values
-    .replace(/(:)(\s*)([^;]+)(;)/g, '$1$2<span class="css-value">$3</span>$4')
-    // Highlight braces
-    .replace(/([{}])/g, '<span class="css-brace">$1</span>');
-
-  // Apply active rule highlighting
-  if (ruleHighlightMap.size > 0) {
-    const lines = css.split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      if (ruleHighlightMap.has(i)) {
-        lines[i] = `<div class="active-rule-line">${lines[i]}</div>`;
-      }
-    }
-    css = lines.join("\n");
-  }
-
-  return css;
+  // No active rule - just apply syntax highlighting
+  return (
+    formattedCss.value
+      // Highlight selectors
+      .replace(/^([^{]+)(?=\s*\{)/gm, '<span class="css-selector">$1</span>')
+      // Highlight properties
+      .replace(
+        /(\s+)([a-zA-Z-]+)(\s*:)/g,
+        '$1<span class="css-property">$2</span>$3'
+      )
+      // Highlight values
+      .replace(/(:)(\s*)([^;]+)(;)/g, '$1$2<span class="css-value">$3</span>$4')
+      // Highlight braces
+      .replace(/([{}])/g, '<span class="css-brace">$1</span>')
+  );
 });
 
 const canAddRule: ComputedRef<boolean> = computed<boolean>(() => {
@@ -551,11 +587,8 @@ function addRule(): void {
     };
     cssRules.value.push(newRuleObj);
 
-    // Reset form
-    newRule.value = {
-      selector: "",
-      declarations: [{ property: "", value: "" }],
-    };
+    // Close modal and reset form
+    closeAddRuleModal();
   }
 }
 
@@ -660,6 +693,27 @@ function focusNextInput(event: Event): void {
   if (valueInput) {
     valueInput.focus();
   }
+}
+
+// Add Rule Modal functions
+function openAddRuleModal(): void {
+  showAddRuleModal.value = true;
+  // Focus the selector input after modal opens
+  setTimeout(() => {
+    const selectorInput = document.getElementById('selectorInput') as HTMLInputElement;
+    if (selectorInput) {
+      selectorInput.focus();
+    }
+  }, 100);
+}
+
+function closeAddRuleModal(): void {
+  showAddRuleModal.value = false;
+  // Reset form when closing
+  newRule.value = {
+    selector: "",
+    declarations: [{ property: "", value: "" }],
+  };
 }
 </script>
 
@@ -964,25 +1018,55 @@ h1 {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .rules-list {
+  flex: 1;
   margin-bottom: 24px;
-  max-height: 400px;
   overflow-y: auto;
 }
 
-.add-rule-form {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  padding: 20px;
-  background: #fafafa;
+.add-rule-section {
+  padding: 16px 0;
+  border-top: 1px solid #eee;
 }
 
-.add-rule-form h3 {
-  margin: 0 0 16px 0;
-  color: #555;
-  font-size: 16px;
+.add-rule-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border: 2px dashed #007bff;
+  background: rgba(0, 123, 255, 0.05);
+  color: #007bff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-rule-btn:hover {
+  background: rgba(0, 123, 255, 0.1);
+  border-color: #0056b3;
+  color: #0056b3;
+}
+
+.add-rule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 14px;
 }
 
 .input-field {
@@ -1017,11 +1101,32 @@ h1 {
   margin-bottom: 8px;
 }
 
-.new-declaration span {
+.declaration-colon {
   margin: 0 8px;
   font-family: "Fira Code", "Monaco", "Consolas", monospace;
   color: #6f42c1;
   font-weight: bold;
+}
+
+.add-declaration-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #6c757d;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.add-declaration-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+  color: #495057;
 }
 
 .primary-btn {
@@ -1129,29 +1234,19 @@ h1 {
   font-weight: bold;
 }
 
-/* Active rule highlighting */
-:deep(.active-rule-line) {
+/* Active rule highlighting - Block-level approach (no line spacing issues) */
+:deep(.active-rule-block) {
   background: rgba(255, 193, 7, 0.2);
   border-left: 4px solid #ffc107;
-  padding: 0 0 0 12px;
-  margin: 0;
-  border-radius: 0;
-  display: block;
-  position: relative;
-  line-height: 1.6;
-}
-
-:deep(.active-rule-line:first-of-type) {
-  border-radius: 4px 4px 0 0;
-  animation: highlight-pulse 0.6s ease-in;
-}
-
-:deep(.active-rule-line:last-of-type) {
-  border-radius: 0 0 4px 4px;
-}
-
-:deep(.active-rule-line:only-of-type) {
+  padding-left: 12px;
+  margin: 4px 0;
   border-radius: 4px;
+  display: inline-block;
+  width: calc(100% - 16px); /* Account for border and padding */
+  white-space: pre-wrap;
+  position: relative;
+  animation: highlight-pulse 0.6s ease-in;
+  box-sizing: border-box;
 }
 
 @keyframes highlight-pulse {
