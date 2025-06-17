@@ -5,10 +5,13 @@
 </template>
 
 <script setup lang="ts">
-import CssEditor from "./components/CssEditor.vue";
+import { CssEditor } from "./features/css-editor/components";
 </script>
 
 <style>
+/* Add Font for better code display */
+@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&display=swap");
+
 * {
   box-sizing: border-box;
 }
@@ -24,9 +27,6 @@ body {
 #app {
   min-height: 100vh;
 }
-
-/* Add Font for better code display */
-@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&display=swap");
 
 /* Custom scrollbar styles */
 ::-webkit-scrollbar {

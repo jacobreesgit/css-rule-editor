@@ -6,11 +6,13 @@
     tabindex="0"
   >
     <div class="rule-header">
+      <div class="selector-display" v-if="props.searchQuery && highlightedSelector !== localRule.selector" v-html="highlightedSelector"></div>
       <input
         v-model="localRule.selector"
         @blur="updateRule"
         @focus="handleFocus"
         class="selector-input"
+        :class="{ 'search-active': props.searchQuery }"
         placeholder="CSS Selector"
         @click.stop
       />
@@ -23,26 +25,35 @@
         :key="index"
         class="declaration"
       >
-        <input
-          v-model="decl.property"
-          @blur="updateRule"
-          @focus="handleFocus"
-          class="property-input"
-          placeholder="property"
-          @click.stop
-        />
-        <span class="colon">:</span>
-        <input
-          v-model="decl.value"
-          @blur="updateRule"
-          @focus="handleFocus"
-          class="value-input"
-          placeholder="value"
-          @click.stop
-        />
-        <button @click.stop="removeDeclaration(index)" class="remove-decl-btn">
-          ×
-        </button>
+        <div class="declaration-highlights" v-if="props.searchQuery && (highlightedDeclarations[index]?.property !== decl.property || highlightedDeclarations[index]?.value !== decl.value)">
+          <div class="property-display" v-html="highlightedDeclarations[index]?.property"></div>
+          <span class="colon">:</span>
+          <div class="value-display" v-html="highlightedDeclarations[index]?.value"></div>
+        </div>
+        <div class="declaration-inputs">
+          <input
+            v-model="decl.property"
+            @blur="updateRule"
+            @focus="handleFocus"
+            class="property-input"
+            :class="{ 'search-active': props.searchQuery }"
+            placeholder="property"
+            @click.stop
+          />
+          <span class="colon">:</span>
+          <input
+            v-model="decl.value"
+            @blur="updateRule"
+            @focus="handleFocus"
+            class="value-input"
+            :class="{ 'search-active': props.searchQuery }"
+            placeholder="value"
+            @click.stop
+          />
+          <button @click.stop="removeDeclaration(index)" class="remove-decl-btn">
+            ×
+          </button>
+        </div>
       </div>
 
       <button @click.stop="addDeclaration" class="add-declaration-btn">
@@ -53,26 +64,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import type { CssRule, CssDeclaration } from "../types";
+import { ref, watch, computed } from "vue";
+import type { CssRule, CssDeclaration } from "../../../lib/types";
 
 const props = defineProps<{
   rule: CssRule;
   isActive?: boolean;
+  searchQuery?: string;
 }>();
 
 const emit = defineEmits<{
-  update: [rule: CssRule];
+  update: [rule: CssRule, oldRule?: CssRule];
   remove: [];
   setActive: [id: string];
   clearActive: [];
 }>();
 
 const localRule = ref<CssRule>(JSON.parse(JSON.stringify(props.rule)));
+const previousRule = ref<CssRule>(JSON.parse(JSON.stringify(props.rule)));
+
+// Function to highlight search matches
+function highlightSearchMatches(text: string): string {
+  if (!props.searchQuery || !props.searchQuery.trim()) return text;
+  
+  const query = props.searchQuery.trim();
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return text.replace(regex, '<mark class="search-highlight">$1</mark>');
+}
+
+// Computed properties for highlighted values
+const highlightedSelector = computed(() => highlightSearchMatches(localRule.value.selector));
+const highlightedDeclarations = computed(() => {
+  return localRule.value.declarations.map(decl => ({
+    property: highlightSearchMatches(decl.property),
+    value: highlightSearchMatches(decl.value),
+    originalProperty: decl.property,
+    originalValue: decl.value
+  }));
+});
 
 watch(
   () => props.rule,
   (newRule) => {
+    previousRule.value = JSON.parse(JSON.stringify(localRule.value));
     localRule.value = JSON.parse(JSON.stringify(newRule));
   },
   { deep: true }
@@ -98,7 +132,7 @@ function updateRule() {
   localRule.value.declarations = localRule.value.declarations.filter(
     (decl: CssDeclaration) => decl.property && decl.value
   );
-  emit("update", localRule.value);
+  emit("update", localRule.value, previousRule.value);
 }
 
 function addDeclaration() {
@@ -299,5 +333,76 @@ function removeDeclaration(index: number) {
 .value-input::placeholder {
   color: #032f62;
   opacity: 0.5;
+}
+
+/* Search highlighting styles */
+.selector-display,
+.property-display,
+.value-display {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: inherit;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: transparent;
+  z-index: 1;
+}
+
+.selector-input.search-active,
+.property-input.search-active,
+.value-input.search-active {
+  background: rgba(255, 255, 0, 0.1);
+  position: relative;
+  z-index: 2;
+}
+
+.declaration {
+  position: relative;
+}
+
+.declaration-highlights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.declaration-inputs {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+}
+
+.property-display {
+  width: 140px;
+  margin-right: 4px;
+}
+
+.value-display {
+  flex: 1;
+  margin-left: 8px;
+  margin-right: 32px;
+}
+
+/* Global search highlight styles */
+.search-highlight {
+  background: yellow !important;
+  color: #000 !important;
+  padding: 1px 2px;
+  border-radius: 2px;
+  font-weight: 600;
 }
 </style>
